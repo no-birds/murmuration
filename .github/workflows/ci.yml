@@ -32,18 +32,18 @@ jobs:
     name: test (JVM 17)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       # Toolchain (compilation) is 21; tests run on the declared minimum, JVM 17. Both JDKs are installed,
       # the first one becomes JAVA_HOME.
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: |
             21
             17
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
       # --rerun after each test task: never trust up-to-date/build-cache results for tests.
       - name: Test and check
         run: >-
@@ -86,14 +86,14 @@ jobs:
       # The runner context is not available in job-level env, so STAGING is exported from a step.
       - name: Set staging path
         run: echo "STAGING=$RUNNER_TEMP/staging" >> "$GITHUB_ENV"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
       - name: Resolve version
         id: version
         env:
