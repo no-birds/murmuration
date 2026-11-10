@@ -1,0 +1,114 @@
+{
+ "BaseBuilder": {
+  "count": 27,
+  "digest": "479de744c087d843"
+ },
+ "BattleStagingBuilder": {
+  "count": 86,
+  "digest": "c3122843fbf2adb3"
+ },
+ "BioBuilder": {
+  "count": 36,
+  "digest": "d3a24e15969f9c63"
+ },
+ "BookStructureBuilder": {
+  "count": 180,
+  "digest": "014e96a8985a1dae"
+ },
+ "CharacterAgentBuilder": {
+  "count": 161,
+  "digest": "dd55a2af686b9679"
+ },
+ "CharacterPlannerBuilder": {
+  "count": 17,
+  "digest": "9258d52b634b497c"
+ },
+ "CharacterUpdateClassifierBuilder": {
+  "count": 3,
+  "digest": "adb3cb95b7c4438e"
+ },
+ "CombatAssessorBuilder": {
+  "count": 6,
+  "digest": "2a34250a2e00bef1"
+ },
+ "DerivationBuilder": {
+  "count": 43,
+  "digest": "5e4e36c6fa018e94"
+ },
+ "FeaturesBuilder": {
+  "count": 32,
+  "digest": "36180c14275f62f3"
+ },
+ "InventoryBuilder": {
+  "count": 35,
+  "digest": "b6181ebdb90c2d5d"
+ },
+ "MapDesignBuilder": {
+  "count": 16,
+  "digest": "8d802a8daf6e06ed"
+ },
+ "MemoryKeeperBuilder": {
+  "count": 23,
+  "digest": "f016b401c1cd892e"
+ },
+ "MultiAgentBookDescriptionsBuilder": {
+  "count": 26,
+  "digest": "067cf1f0952b735a"
+ },
+ "MultiAgentBookEncountersBuilder": {
+  "count": 44,
+  "digest": "9e59111287395d9b"
+ },
+ "MultiAgentBookLocationsBuilder": {
+  "count": 46,
+  "digest": "ae6f1020713808d3"
+ },
+ "MultiAgentBookLoreBuilder": {
+  "count": 38,
+  "digest": "c4ec146d87abc001"
+ },
+ "MultiAgentBookNpcsBuilder": {
+  "count": 19,
+  "digest": "f372226de8626f9f"
+ },
+ "MultiAgentBookPlannerBuilder": {
+  "count": 28,
+  "digest": "2a76d6c6d03ba4fc"
+ },
+ "MultiAgentBookStoryBuilder": {
+  "count": 30,
+  "digest": "0f94c872150d4e99"
+ },
+ "ParticipantIntentBuilder": {
+  "count": 3,
+  "digest": "9185ffc0ac238a96"
+ },
+ "ProficienciesBuilder": {
+  "count": 16,
+  "digest": "f4867a277c291a82"
+ },
+ "ReplyBuilder": {
+  "count": 170,
+  "digest": "7c9633f726a9ac05"
+ },
+ "ReplyBuilder_combat": {
+  "count": 170,
+  "digest": "7c9633f726a9ac05"
+ },
+ "ReplyBuilder_noncombat": {
+  "count": 160,
+  "digest": "ad899a1ee6f7a2f8"
+ },
+ "SceneStagingBuilder": {
+  "count": 110,
+  "digest": "070997b91fad1caf"
+ },
+ "SpellsBuilder": {
+  "count": 41,
+  "digest": "8252ed1a76bee410"
+ },
+ "StatsBuilder": {
+  "count": 33,
+  "digest": "abe6aa20cbbd7faf"
+ }
+}

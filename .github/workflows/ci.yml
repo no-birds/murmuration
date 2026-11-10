@@ -1,0 +1,150 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Ignored by a manual run (a synthetic version is used); declared so that `inputs.version` is defined on every trigger
+        required: false
+        default: 0.0.1
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        description: Release version X.Y.Z computed by the caller's guard job (mandatory, never empty)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.welcome=never
+  # Synthetic version used only when CI runs by itself (PR, branch push, manual dispatch):
+  # it labels staging artifacts and never leaves the runner.
+  SYNTHETIC_VERSION: 0.0.1
+
+jobs:
+  test:
+    name: test (JVM ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Toolchain (compilation) is 21; tests run on the matrix JVM. Both JDKs are installed,
+      # the first one becomes JAVA_HOME.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            ${{ matrix.java }}
+      - uses: gradle/actions/setup-gradle@v4
+      # --rerun after each test task: never trust up-to-date/build-cache results for tests.
+      - name: Test and check
+        run: >-
+          ./gradlew
+          :murmuration:test --rerun
+          :murmuration-gemini:test --rerun
+          :murmuration-openai:test --rerun
+          :murmuration-anthropic:test --rerun
+          :murmuration-samples:test --rerun
+          check
+          -Pmurmuration.testJvm=${{ matrix.java }}
+          -Porg.gradle.java.installations.fromEnv=JAVA_HOME_17_X64,JAVA_HOME_21_X64
+          --console=plain
+      - name: Count tests
+        run: |
+          total=$(find . -path '*/build/test-results/test/*.xml' -print0 \
+            | xargs -0 grep -ho '<testsuite [^>]*' \
+            | grep -o ' tests="[0-9]*"' | grep -o '[0-9]*' \
+            | awk '{ s += $1 } END { print s + 0 }')
+          echo "tests=$total"
+          [ "$total" -gt 0 ]
+      - name: lang (no Cyrillic anywhere in the tree)
+        if: matrix.java == '21'
+        env:
+          LC_ALL: C.UTF-8
+        run: |
+          if git grep -I -n -P '[\x{0400}-\x{04FF}]'; then
+            echo "lang: Cyrillic found, the repository is English only"
+            exit 1
+          fi
+          echo "lang: 0 matches"
+      # Goes red until the example module, README and docs/ exist.
+      - name: docs
+        if: matrix.java == '21'
+        run: scripts/check-docs.sh
+
+  stage:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      STAGING: ${{ runner.temp }}/staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Resolve version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          CALLER: ${{ github.workflow }}
+        run: |
+          source scripts/lib.sh
+          # github.workflow is the CALLER's name inside a reusable workflow.
+          if [ "$CALLER" = "CI" ]; then
+            version="$SYNTHETIC_VERSION"
+          else
+            version="$INPUT_VERSION"
+          fi
+          require_release_semver "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "staging version: $version"
+      - name: Publish to staging and check it
+        run: scripts/stage-publish.sh "${{ steps.version.outputs.version }}" "$GITHUB_SHA" "$STAGING"
+      # The real verify and tag scripts. Three substitutions: the base URL of verify points at a local
+      # server over staging; the tag push and the GitHub Release creation are printed, not executed.
+      - name: verify (against staging)
+        run: |
+          python3 -m http.server 8080 --bind 127.0.0.1 --directory "$STAGING" >"$RUNNER_TEMP/http.log" 2>&1 &
+          server=$!
+          trap 'kill $server' EXIT
+          for _ in $(seq 1 20); do curl -s -o /dev/null http://127.0.0.1:8080/ && break; sleep 0.5; done
+          export MAVEN_BASE=http://127.0.0.1:8080 VERIFY_TIMEOUT=60 VERIFY_INTERVAL=2
+          scripts/verify.sh "${{ steps.version.outputs.version }}" present
+          # The guard path (absent mode) runs the same script: an unpublished number must pass.
+          scripts/verify.sh 9.9.9 absent
+          # ... and a published one must be refused.
+          if scripts/verify.sh "${{ steps.version.outputs.version }}" absent; then
+            echo "absent mode accepted a served version"
+            exit 1
+          fi
+      - name: tag (side effects printed)
+        env:
+          SIDE_EFFECT_WRAP: echo [stage-substitution]
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          # First run: no local tag yet, so the create-and-push branch is the one executed.
+          scripts/tag.sh "$version" "$GITHUB_SHA"
+          # Idempotence: same SHA again is a skip; another SHA is a refusal.
+          scripts/tag.sh "$version" "$GITHUB_SHA"
+          if other=$(git rev-parse -q --verify HEAD~1); then
+            if scripts/tag.sh "$version" "$other"; then
+              echo "tag.sh accepted an existing tag on a different SHA"
+              exit 1
+            fi
+          fi

@@ -1,0 +1,4 @@
+# One extended regex per line (grep -E). Matches in README.md, docs/, CONTRIBUTING.md, SECURITY.md
+# fail the docs check. Maintained together with the pre-publication scan.
+/Users/
+\.claude/
