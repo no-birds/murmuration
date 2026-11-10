@@ -17,8 +17,8 @@ scripts/check-docs.sh                # the documentation checks CI runs
 - Always add `--rerun` right after a test task when you want a real run: without it Gradle may report an
   up-to-date or cached result without executing a single test. Check the `tests=` count in the XML reports under
   `build/test-results/` if in doubt.
-- Compatibility matrix: tests run on JVM 17 and JVM 21. Select the JVM locally with
-  `-Pmurmuration.testJvm=17` (or `21`); both JDKs must be installed.
+- Test JVM: CI runs the tests on JVM 17, the declared minimum. Compilation uses the JDK 21 toolchain. Select the test
+  JVM locally with `-Pmurmuration.testJvm=17` (or `21`); both JDKs must be installed.
 - Tests must not call a real LLM or any paid provider; use fake executors (see `murmuration-samples`).
 - The declared minimum for consumers (JVM 17, Kotlin 2.3) lives in one place, the `kotlin` convention plugin in
   `build-logic`. `./gradlew printCompatibility` prints it and the README's Compatibility section must match.

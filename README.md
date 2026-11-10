@@ -148,7 +148,7 @@ Kotlin: 2.3
 Kotlin standard library: 2.3.21
 ```
 
-The modules are compiled with a JDK 21 toolchain against the JVM 17 API and tested on JVM 17 and 21.
+The modules are compiled with a JDK 21 toolchain against the JVM 17 API and tested on JVM 17.
 
 ## Releases
 

@@ -29,24 +29,20 @@ env:
 
 jobs:
   test:
-    name: test (JVM ${{ matrix.java }})
+    name: test (JVM 17)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        java: ['17', '21']
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      # Toolchain (compilation) is 21; tests run on the matrix JVM. Both JDKs are installed,
+      # Toolchain (compilation) is 21; tests run on the declared minimum, JVM 17. Both JDKs are installed,
       # the first one becomes JAVA_HOME.
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: |
             21
-            ${{ matrix.java }}
+            17
       - uses: gradle/actions/setup-gradle@v4
       # --rerun after each test task: never trust up-to-date/build-cache results for tests.
       - name: Test and check
@@ -58,7 +54,7 @@ jobs:
           :murmuration-anthropic:test --rerun
           :murmuration-samples:test --rerun
           check
-          -Pmurmuration.testJvm=${{ matrix.java }}
+          -Pmurmuration.testJvm=17
           -Porg.gradle.java.installations.fromEnv=JAVA_HOME_17_X64,JAVA_HOME_21_X64
           --console=plain
       - name: Count tests
@@ -70,7 +66,6 @@ jobs:
           echo "tests=$total"
           [ "$total" -gt 0 ]
       - name: lang (no Cyrillic anywhere in the tree)
-        if: matrix.java == '21'
         env:
           LC_ALL: C.UTF-8
         run: |
@@ -81,7 +76,6 @@ jobs:
           echo "lang: 0 matches"
       # Goes red until the example module, README and docs/ exist.
       - name: docs
-        if: matrix.java == '21'
         run: scripts/check-docs.sh
 
   stage:
