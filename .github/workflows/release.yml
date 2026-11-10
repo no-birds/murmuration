@@ -1,12 +1,21 @@
-# REHEARSAL workflow (initial commit). Manual only, hard-wired version 0.0.1, never auto-publishes.
-# The production workflow replaces this file in a single later commit; it is kept outside
-# .github/workflows as release-final.yml.draft until then.
-name: Release (rehearsal)
+# Release workflow: every push to main publishes a patch release to Maven Central;
+# a manual run can publish a minor or major release. Publishing requires approval of the
+# `central` environment.
+name: Release
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      incrementer:
+        description: Which part of the version to increment
+        type: choice
+        options: [patch, minor, major]
+        default: patch
 
-# One run at a time; a queued run is never cancelled by a newer one in progress.
+# V-8: one run at a time. A queued run is replaced by a newer queued one, so the owner compares the
+# computed version in the publish summary at approval time and re-dispatches if it is not the intended one.
 concurrency:
   group: release
   cancel-in-progress: false
@@ -14,27 +23,47 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  REHEARSAL_VERSION: 0.0.1
-
 jobs:
+  # V-1: the only writer of the version. axion-release computes it WITHOUT creating any tag.
+  # V-2: only the remote is inspected.
   guard:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.v.outputs.version }}
+      sha: ${{ steps.v.outputs.sha }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Preconditions
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Compute the release version
         id: v
+        env:
+          INCREMENTER: ${{ inputs.incrementer || 'patch' }}
         run: |
           source scripts/lib.sh
-          [ "$GITHUB_REF" = "refs/heads/main" ] || { echo "rehearsal runs only from main, got $GITHUB_REF"; exit 1; }
-          require_release_semver "$REHEARSAL_VERSION"
-          # No tags are created here; only the remote is looked at.
-          scripts/verify.sh "$REHEARSAL_VERSION" absent
-          echo "version=$REHEARSAL_VERSION" >> "$GITHUB_OUTPUT"
+          [ "$GITHUB_REF" = "refs/heads/main" ] || { echo "release only from main, got $GITHUB_REF"; exit 1; }
+          git fetch --tags --force
+          case "$INCREMENTER" in
+            patch) inc=incrementPatch ;;
+            minor) inc=incrementMinor ;;
+            major) inc=incrementMajor ;;
+            *) echo "unknown incrementer: $INCREMENTER"; exit 1 ;;
+          esac
+          # currentVersion only reads: no tag is created. The root build configures axion without SNAPSHOT/branch
+          # decoration, so on an untagged HEAD it answers the plain next release number X.Y.Z.
+          raw=$(./gradlew -q --console=plain currentVersion -Prelease.quiet "-Prelease.versionIncrementer=$inc" | tail -n 1)
+          echo "axion answered: $raw"
+          version="$raw"
+          require_release_semver "$version"
+          scripts/verify.sh "$version" absent
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          echo "### Release $version ($INCREMENTER) from $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
 
   ci:
     needs: guard
@@ -44,7 +73,7 @@ jobs:
     with:
       version: ${{ needs.guard.outputs.version }}
 
-  # The only job that sees secrets. Third-party actions are pinned by commit SHA; no Gradle cache action.
+  # The only job that sees secrets; approval of the environment is the human gate.
   publish:
     needs: [guard, ci]
     runs-on: ubuntu-latest
@@ -53,9 +82,9 @@ jobs:
       contents: read
     env:
       VERSION: ${{ needs.guard.outputs.version }}
-      # Rehearsal mode: upload to the Portal, wait for VALIDATED, do NOT publish.
-      ORG_GRADLE_PROJECT_mavenCentralAutomaticPublishing: 'false'
-      ORG_GRADLE_PROJECT_mavenCentralDeploymentValidation: VALIDATED
+      # Release mode: publish automatically; Gradle waits for PUBLISHED.
+      ORG_GRADLE_PROJECT_mavenCentralAutomaticPublishing: 'true'
+      ORG_GRADLE_PROJECT_mavenCentralDeploymentValidation: PUBLISHED
       ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
       ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
       ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
@@ -70,37 +99,29 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      # V-6: print the effective mode before the first Portal command and refuse automatic publishing.
-      - name: Effective mode
-        run: |
-          echo "version:               $VERSION"
-          echo "automatic publishing:  $ORG_GRADLE_PROJECT_mavenCentralAutomaticPublishing"
-          echo "wait for state:        $ORG_GRADLE_PROJECT_mavenCentralDeploymentValidation"
-          [ "$ORG_GRADLE_PROJECT_mavenCentralAutomaticPublishing" = "false" ] || { echo "automatic publishing must be off in the rehearsal"; exit 1; }
-          [ "$ORG_GRADLE_PROJECT_mavenCentralDeploymentValidation" = "VALIDATED" ] || { echo "rehearsal must wait for VALIDATED"; exit 1; }
-          if git grep -n -i -E 'mavenCentralAutomaticPublishing *= *true' -- gradle.properties '*.kts'; then
-            echo "automatic publishing is switched on in the build files"
-            exit 1
-          fi
-      - name: Upload to the Portal and wait for VALIDATED
+      - name: Publish
         run: ./gradlew publishToMavenCentral "-Prelease.forceVersion=$VERSION" "-Pmurmuration.buildSha=$GITHUB_SHA" --console=plain
-      - name: Summary
-        run: |
-          {
-            echo "### Rehearsal $VERSION uploaded and VALIDATED"
-            echo "Nothing is published. Drop the deployment in the Central Portal UI before the real release."
-          } >> "$GITHUB_STEP_SUMMARY"
 
-  # Rehearsal verify. In the real release this job polls repo.maven.apache.org until the files appear.
-  # A deployment that stops at VALIDATED never reaches that host, so waiting for it here would only time out.
-  # The Portal state is awaited inside publish (plugin property above); this job holds no secrets and checks
-  # the negative: the rehearsal must not have published anything.
   verify:
     needs: [guard, publish]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Nothing reached Maven Central
-        run: scripts/verify.sh "${{ needs.guard.outputs.version }}" absent
+      - name: Wait for the files on Maven Central
+        run: scripts/verify.sh "${{ needs.guard.outputs.version }}" present
 
-  # No tag job: the rehearsal never pushes a tag (and never creates a GitHub Release).
+  # V-4: idempotent; re-running a failed verify or tag is safe.
+  tag:
+    needs: [guard, verify]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.guard.outputs.sha }}
+          fetch-depth: 0
+      - name: Tag and create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/tag.sh "${{ needs.guard.outputs.version }}" "${{ needs.guard.outputs.sha }}"
