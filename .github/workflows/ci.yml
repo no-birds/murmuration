@@ -88,8 +88,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
-      STAGING: ${{ runner.temp }}/staging
     steps:
+      # The runner context is not available in job-level env, so STAGING is exported from a step.
+      - name: Set staging path
+        run: echo "STAGING=$RUNNER_TEMP/staging" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
