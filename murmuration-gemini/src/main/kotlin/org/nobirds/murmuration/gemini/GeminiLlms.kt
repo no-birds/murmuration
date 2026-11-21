@@ -91,6 +91,36 @@ object GeminiLlms {
         cacheStoragePricePerMillionPerHour = 1.0,
     )
 
+    // Gemini 4 Hydrogen (global tier, standard — not promotional): input $1.50/1M, cached input
+    // $0.075/1M, output $7.50/1M (reasoning included), flat across the whole 1M context. Gemini 4
+    // has no explicit context cache (`cachedContents`), so there is no storage rate: 0.0. Implicit
+    // cache hits are still billed at the cached input rate. Non-global tier is 10% higher.
+    private val GEMINI_4_HYDROGEN_PRICING = LlmPricingProfile(
+        inputPricePerMillion = 1.5,
+        cachedInputPricePerMillion = 0.075,
+        outputPricePerMillion = 7.5,
+        cacheStoragePricePerMillionPerHour = 0.0,
+    )
+
+    // Gemini 4 Neon is deliberately absent: the model id is not confirmed by an official source yet.
+
+    // Gemini 4 Carbon and Argon share one tariff (global tier): input $4.00/1M, cached input
+    // $0.20/1M, output $20.00/1M. This is the standard rate effective from 2026-12-01; a
+    // promotional half rate ($2/$0.10/$10) applies through 2026-11-30. No explicit cache, so no
+    // storage rate: 0.0.
+    private val GEMINI_4_CARBON_ARGON_PRICING = LlmPricingProfile(
+        inputPricePerMillion = 4.0,
+        cachedInputPricePerMillion = 0.2,
+        outputPricePerMillion = 20.0,
+        cacheStoragePricePerMillionPerHour = 0.0,
+    )
+
+    // Gemini 4 thinking tiers. The API accepts LOW/MEDIUM/HIGH/XHIGH and rejects MINIMAL and
+    // `thinking_budget` with a 400. [ThinkingLevel] has no XHIGH, so we declare the three tiers
+    // it can express; with this declaration `clampThinkingLevel` turns MINIMAL into LOW instead
+    // of letting it 400.
+    private val GEMINI_4_THINKING_LEVELS = arrayOf(ThinkingLevel.LOW, ThinkingLevel.MEDIUM, ThinkingLevel.HIGH)
+
     // Gemini 3.1 Flash Image Preview: input (text, image) $0.5/1M, image output $60/1M,
     // thinking $3/1M (a separate rate — for an image model thinking is NOT billed at the image price!). Previously
     // thinking was billed at $60/1M (image output) and overstated the image cost ~20x.
@@ -246,6 +276,51 @@ object GeminiLlms {
             arrayOf(ThinkingLevel.LOW, ThinkingLevel.MEDIUM, ThinkingLevel.HIGH),
         )
 
+        /**
+         * Gemini 4 Hydrogen. Implicit prompt caching only: the model rejects explicit `cachedContents`.
+         * Thinking is level-based (LOW/MEDIUM/HIGH); MINIMAL and a token budget are rejected by the API.
+         */
+        val GEMINI_4_HYDROGEN = geminiTextModel(
+            "google",
+            "Gemini 4 Hydrogen",
+            "4",
+            false,
+            "gemini-4-hydrogen",
+            GEMINI_4_HYDROGEN_PRICING,
+            4096,
+            GEMINI_4_THINKING_LEVELS,
+        )
+
+        /**
+         * Gemini 4 Carbon. Implicit prompt caching only: the model rejects explicit `cachedContents`.
+         * Thinking is level-based (LOW/MEDIUM/HIGH); MINIMAL and a token budget are rejected by the API.
+         */
+        val GEMINI_4_CARBON = geminiTextModel(
+            "google",
+            "Gemini 4 Carbon",
+            "4",
+            false,
+            "gemini-4-carbon",
+            GEMINI_4_CARBON_ARGON_PRICING,
+            4096,
+            GEMINI_4_THINKING_LEVELS,
+        )
+
+        /**
+         * Gemini 4 Argon. Implicit prompt caching only: the model rejects explicit `cachedContents`.
+         * Thinking is level-based (LOW/MEDIUM/HIGH); MINIMAL and a token budget are rejected by the API.
+         */
+        val GEMINI_4_ARGON = geminiTextModel(
+            "google",
+            "Gemini 4 Argon",
+            "4",
+            false,
+            "gemini-4-argon",
+            GEMINI_4_CARBON_ARGON_PRICING,
+            4096,
+            GEMINI_4_THINKING_LEVELS,
+        )
+
         val GEMINI_3_1_FLASH_LITE = geminiTextModel(
             "google",
             "Gemini 3.1 Flash-Lite",
@@ -306,6 +381,9 @@ object GeminiLlms {
             GEMINI_3_6_FLASH,
             GEMINI_3_7_FLASH,
             GEMINI_3_8_FLASH,
+            GEMINI_4_HYDROGEN,
+            GEMINI_4_CARBON,
+            GEMINI_4_ARGON,
             GEMINI_3_1_FLASH_LITE,
             GEMINI_3_5_FLASH_LITE,
             GEMINI_3_1_PRO,
@@ -372,6 +450,51 @@ object GeminiLlms {
             4096,
             // 3.8 declares its tiers: the config-level check (ai.models.*.thinkingLevel) validates against them.
             arrayOf(ThinkingLevel.LOW, ThinkingLevel.MEDIUM, ThinkingLevel.HIGH),
+        )
+
+        /**
+         * Gemini 4 Hydrogen. Implicit prompt caching only: the model rejects explicit `cachedContents`.
+         * Thinking is level-based (LOW/MEDIUM/HIGH); MINIMAL and a token budget are rejected by the API.
+         */
+        val VERTEX_GEMINI_4_HYDROGEN = geminiTextModel(
+            "vertex",
+            "Gemini 4 Hydrogen",
+            "4",
+            false,
+            "gemini-4-hydrogen",
+            GEMINI_4_HYDROGEN_PRICING,
+            4096,
+            GEMINI_4_THINKING_LEVELS,
+        )
+
+        /**
+         * Gemini 4 Carbon. Implicit prompt caching only: the model rejects explicit `cachedContents`.
+         * Thinking is level-based (LOW/MEDIUM/HIGH); MINIMAL and a token budget are rejected by the API.
+         */
+        val VERTEX_GEMINI_4_CARBON = geminiTextModel(
+            "vertex",
+            "Gemini 4 Carbon",
+            "4",
+            false,
+            "gemini-4-carbon",
+            GEMINI_4_CARBON_ARGON_PRICING,
+            4096,
+            GEMINI_4_THINKING_LEVELS,
+        )
+
+        /**
+         * Gemini 4 Argon. Implicit prompt caching only: the model rejects explicit `cachedContents`.
+         * Thinking is level-based (LOW/MEDIUM/HIGH); MINIMAL and a token budget are rejected by the API.
+         */
+        val VERTEX_GEMINI_4_ARGON = geminiTextModel(
+            "vertex",
+            "Gemini 4 Argon",
+            "4",
+            false,
+            "gemini-4-argon",
+            GEMINI_4_CARBON_ARGON_PRICING,
+            4096,
+            GEMINI_4_THINKING_LEVELS,
         )
 
         val VERTEX_GEMINI_3_1_FLASH_LITE = geminiTextModel(
@@ -450,6 +573,9 @@ object GeminiLlms {
             VERTEX_GEMINI_3_6_FLASH,
             VERTEX_GEMINI_3_7_FLASH,
             VERTEX_GEMINI_3_8_FLASH,
+            VERTEX_GEMINI_4_HYDROGEN,
+            VERTEX_GEMINI_4_CARBON,
+            VERTEX_GEMINI_4_ARGON,
             VERTEX_GEMINI_3_1_FLASH_LITE,
             VERTEX_GEMINI_3_5_FLASH_LITE,
             VERTEX_GEMINI_3_1_PRO,
