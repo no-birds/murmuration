@@ -61,6 +61,7 @@ object GeminiLlms {
         cacheStoragePricePerMillionPerHour = 1.0,
     )
 
+    // Gemini 3.6 Flash (global tier, standard): input $1.5/1M, cached $0.15/1M, output $7.5/1M.
     private val GEMINI_3_6_FLASH_PRICING = LlmPricingProfile(
         inputPricePerMillion = 1.5,
         cachedInputPricePerMillion = 0.15,
@@ -68,26 +69,24 @@ object GeminiLlms {
         cacheStoragePricePerMillionPerHour = 1.0,
     )
 
-    // Gemini 3.7 Flash (released 2026-08-13): introductory pricing through 2026-12-31 —
-    // input $0.75/1M, output $3.75/1M (50% off the standard $1.5/$7.5 that applies from
-    // 2027-01-01; REVISIT this profile then). Cached input assumed at 10% of input
-    // ($0.075/1M) and cache storage at $1/1M/h per the family pattern — refine when
-    // Google publishes the exact rates.
+    // Gemini 3.7 Flash (global tier, standard): input $1.5/1M, cached $0.15/1M, output $7.5/1M.
+    // We price at the standard list rate, not the introductory one ($0.75/$3.75 through 2026-12-31):
+    // the introduction is granted as a 50% credit back, and a payment made in credits is charged in
+    // full. Cache storage at $1/1M/h per the family pattern.
     private val GEMINI_3_7_FLASH_PRICING = LlmPricingProfile(
-        inputPricePerMillion = 0.75,
-        cachedInputPricePerMillion = 0.075,
-        outputPricePerMillion = 3.75,
+        inputPricePerMillion = 1.5,
+        cachedInputPricePerMillion = 0.15,
+        outputPricePerMillion = 7.5,
         cacheStoragePricePerMillionPerHour = 1.0,
     )
 
-    // Gemini 3.8 Flash: per the Google launch blog the price equals 3.7 Flash — introductory
-    // $0.75/1M input, $3.75/1M output through 2026-12-31, standard $1.5/$7.5 from 2027-01-01
-    // (REVISIT this profile then). Cached input assumed at 10% of input ($0.075/1M) and cache
-    // storage at $1/1M/h per the family pattern — refine when Google publishes the exact rates.
+    // Gemini 3.8 Flash (global tier, standard): same rates as 3.7 Flash — input $1.5/1M, cached
+    // $0.15/1M, output $7.5/1M — and priced at the list rate, not the introductory 50% one, for
+    // the same reason (see 3.7). Cache storage at $1/1M/h per the family pattern.
     private val GEMINI_3_8_FLASH_PRICING = LlmPricingProfile(
-        inputPricePerMillion = 0.75,
-        cachedInputPricePerMillion = 0.075,
-        outputPricePerMillion = 3.75,
+        inputPricePerMillion = 1.5,
+        cachedInputPricePerMillion = 0.15,
+        outputPricePerMillion = 7.5,
         cacheStoragePricePerMillionPerHour = 1.0,
     )
 
@@ -105,9 +104,8 @@ object GeminiLlms {
     // Gemini 4 Neon is deliberately absent: the model id is not confirmed by an official source yet.
 
     // Gemini 4 Carbon and Argon share one tariff (global tier): input $4.00/1M, cached input
-    // $0.20/1M, output $20.00/1M. This is the standard rate effective from 2026-12-01; a
-    // promotional half rate ($2/$0.10/$10) applies through 2026-11-30. No explicit cache, so no
-    // storage rate: 0.0.
+    // $0.20/1M, output $20.00/1M — the standard list rate (an introductory half rate through
+    // 2026-11-30 is deliberately not used, see 3.7 Flash). No explicit cache, so no storage rate: 0.0.
     private val GEMINI_4_CARBON_ARGON_PRICING = LlmPricingProfile(
         inputPricePerMillion = 4.0,
         cachedInputPricePerMillion = 0.2,
