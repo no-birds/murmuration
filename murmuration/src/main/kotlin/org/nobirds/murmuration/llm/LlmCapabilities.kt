@@ -31,7 +31,7 @@ sealed interface Capability
  * `false`: the cache manager then never calls `cache.create` for it, while implicit cache hits still
  * show up in the token statistics and are billed at the cached input rate. Defaults to `true`.
  */
-data class Caching(val minTokens: Int, val explicit: Boolean = true) : Capability
+data class Caching @JvmOverloads constructor(val minTokens: Int, val explicit: Boolean = true) : Capability
 
 /**
  * Reasoning/thinking. [modes] (a sealed set) describes how it's controlled — extend by adding a
