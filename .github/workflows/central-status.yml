@@ -1,0 +1,36 @@
+# Manual diagnostic: ask the Central Portal Publisher API for the state of one deployment.
+# Prints only the deployment state, the purls and the errors; credentials are never echoed.
+name: Central deployment status
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_id:
+        description: Central Portal deployment id
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    environment: central
+    steps:
+      - name: Query the Publisher API
+        env:
+          CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOYMENT_ID" =~ ^[0-9a-f-]{36}$ ]] || { echo "not a deployment id"; exit 1; }
+          token=$(printf '%s:%s' "$CENTRAL_USERNAME" "$CENTRAL_PASSWORD" | base64 -w0)
+          echo "::add-mask::$token"
+          code=$(curl -s -o response.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $token" \
+            "https://central.sonatype.com/api/v1/publisher/status?id=$DEPLOYMENT_ID")
+          echo "HTTP $code"
+          jq '{deploymentId, deploymentName, deploymentState, purls, errors}' response.json \
+            | tee -a "$GITHUB_STEP_SUMMARY"
