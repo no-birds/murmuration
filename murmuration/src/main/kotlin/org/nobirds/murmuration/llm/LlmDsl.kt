@@ -46,7 +46,8 @@ class LlmBuilder(private val provider: String, private val model: String) {
         outputs = OutputModalitiesBuilder().apply(block).build()
     }
 
-    fun caching(minTokens: Int) { capabilities += Caching(minTokens) }
+    /** Declares prompt caching; pass `explicit = false` for a model that supports implicit caching only. */
+    fun caching(minTokens: Int, explicit: Boolean = true) { capabilities += Caching(minTokens, explicit) }
     fun thinking(block: ThinkingModesBuilder.() -> Unit) { capabilities += Thinking(ThinkingModesBuilder().apply(block).build()) }
     fun toolCalling() { capabilities += ToolCalling }
 

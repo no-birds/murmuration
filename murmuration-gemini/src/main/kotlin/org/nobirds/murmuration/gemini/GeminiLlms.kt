@@ -208,6 +208,7 @@ object GeminiLlms {
         pricingProfile: LlmPricingProfile,
         cacheTokens: Int,
         thinkingLevels: Array<ThinkingLevel> = emptyArray(),
+        explicitCaching: Boolean = true,
     ): Llm = llm(provider, model) {
         family = "gemini"
         name = displayName
@@ -216,7 +217,7 @@ object GeminiLlms {
         pricing = pricingProfile
         input { text(); image(); audio(); video() }
         output { text(); thoughts() }
-        caching(minTokens = cacheTokens)
+        caching(minTokens = cacheTokens, explicit = explicitCaching)
         // Empty `thinkingLevels` = no declared set (pass-through); non-empty = the supported tiers.
         thinking { level(*thinkingLevels) }
         toolCalling()
@@ -289,6 +290,7 @@ object GeminiLlms {
             GEMINI_4_HYDROGEN_PRICING,
             4096,
             GEMINI_4_THINKING_LEVELS,
+            explicitCaching = false,
         )
 
         /**
@@ -304,6 +306,7 @@ object GeminiLlms {
             GEMINI_4_CARBON_ARGON_PRICING,
             4096,
             GEMINI_4_THINKING_LEVELS,
+            explicitCaching = false,
         )
 
         /**
@@ -319,6 +322,7 @@ object GeminiLlms {
             GEMINI_4_CARBON_ARGON_PRICING,
             4096,
             GEMINI_4_THINKING_LEVELS,
+            explicitCaching = false,
         )
 
         val GEMINI_3_1_FLASH_LITE = geminiTextModel(
@@ -465,6 +469,7 @@ object GeminiLlms {
             GEMINI_4_HYDROGEN_PRICING,
             4096,
             GEMINI_4_THINKING_LEVELS,
+            explicitCaching = false,
         )
 
         /**
@@ -480,6 +485,7 @@ object GeminiLlms {
             GEMINI_4_CARBON_ARGON_PRICING,
             4096,
             GEMINI_4_THINKING_LEVELS,
+            explicitCaching = false,
         )
 
         /**
@@ -495,6 +501,7 @@ object GeminiLlms {
             GEMINI_4_CARBON_ARGON_PRICING,
             4096,
             GEMINI_4_THINKING_LEVELS,
+            explicitCaching = false,
         )
 
         val VERTEX_GEMINI_3_1_FLASH_LITE = geminiTextModel(
