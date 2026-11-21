@@ -25,8 +25,13 @@ sealed interface Capability
 /**
  * Provider-side prompt caching: `cache.create` is rejected for content below [minTokens] tokens
  * (e.g. Vertex Gemini 3.x: 4096; 2.5: 1024).
+ *
+ * [explicit] says whether the model accepts explicitly created caches (`cache.create`). A model with
+ * only implicit caching (the provider caches a repeated prefix on its own, e.g. Gemini 4) sets it to
+ * `false`: the cache manager then never calls `cache.create` for it, while implicit cache hits still
+ * show up in the token statistics and are billed at the cached input rate. Defaults to `true`.
  */
-data class Caching(val minTokens: Int) : Capability
+data class Caching(val minTokens: Int, val explicit: Boolean = true) : Capability
 
 /**
  * Reasoning/thinking. [modes] (a sealed set) describes how it's controlled — extend by adding a

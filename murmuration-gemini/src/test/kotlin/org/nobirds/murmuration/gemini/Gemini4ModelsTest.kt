@@ -63,7 +63,16 @@ class Gemini4ModelsTest {
             val llm = GeminiLlms.findModel(provider, e.model)
             assertEquals("gemini", llm.family)
             assertEquals(4096, llm.capability<Caching>()?.minTokens)
+            // Gemini 4 has no explicit context cache: the cache manager must not call cache.create.
+            assertEquals(false, llm.capability<Caching>()?.explicit, "$provider/${e.model}")
             assertNotNull(llm.capability<ToolCalling>())
+        }
+    }
+
+    @Test
+    fun `older gemini text models keep explicit caching`() {
+        for (provider in providers) {
+            assertEquals(true, GeminiLlms.findModel(provider, "gemini-3.8-flash").capability<Caching>()?.explicit)
         }
     }
 

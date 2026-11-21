@@ -48,6 +48,10 @@ class CacheManager(
         CachePipelineCleaner(scope, storage, backend, emitter)
 
     override suspend fun processPrompt(prompt: Prompt): CacheResult {
+        // Implicit-only models (e.g. Gemini 4) reject `cache.create`: skip quietly, no lookup, no create.
+        // Implicit hits are provider-side and are still reported through the usage statistics.
+        if (prompt.llm.capability<Caching>()?.explicit == false) return CacheResult(prompt = prompt)
+
         val cacheableContents = config.reorderStrategy.collect(prompt.content)
 
         if (cacheableContents.isEmpty()) {
