@@ -82,9 +82,10 @@ jobs:
       contents: read
     env:
       VERSION: ${{ needs.guard.outputs.version }}
-      # Release mode: publish automatically; Gradle waits for PUBLISHED.
+      # Release mode: publish automatically; Gradle waits only for VALIDATED. Central may take longer than
+      # the plugin timeout (900 s) to publish; the bounded wait for the files is the verify job.
       ORG_GRADLE_PROJECT_mavenCentralAutomaticPublishing: 'true'
-      ORG_GRADLE_PROJECT_mavenCentralDeploymentValidation: PUBLISHED
+      ORG_GRADLE_PROJECT_mavenCentralDeploymentValidation: VALIDATED
       ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
       ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
       ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
