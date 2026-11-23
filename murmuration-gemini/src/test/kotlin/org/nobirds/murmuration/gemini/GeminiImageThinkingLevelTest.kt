@@ -102,6 +102,10 @@ class GeminiImageThinkingLevelTest {
         "vertex lite gemini-3.1-flash-lite-image" to GeminiLlms.Vertex.VERTEX_GEMINI_3_1_FLASH_LITE_IMAGE,
         "google senior gemini-3.1-flash-image" to GeminiLlms.Gemini.GEMINI_3_1_FLASH_IMAGE,
         "google lite gemini-3.1-flash-lite-image" to GeminiLlms.Gemini.GEMINI_3_1_FLASH_LITE_IMAGE,
+        "vertex gemini-nano-banana-2.1" to GeminiLlms.Vertex.VERTEX_GEMINI_NANO_BANANA_2_1,
+        "google gemini-nano-banana-2.1" to GeminiLlms.Gemini.GEMINI_NANO_BANANA_2_1,
+        "vertex gemini-3-pro-image" to GeminiLlms.Vertex.VERTEX_GEMINI_3_PRO_IMAGE,
+        "google gemini-3-pro-image" to GeminiLlms.Gemini.GEMINI_3_PRO_IMAGE,
     )
 
     @Test
