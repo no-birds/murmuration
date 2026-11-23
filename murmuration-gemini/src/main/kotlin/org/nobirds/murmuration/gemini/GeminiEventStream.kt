@@ -25,6 +25,13 @@ import kotlin.jvm.optionals.getOrNull
  * - text + thought=false → `MessagePart.Text(text)`
  * - functionCall → `MessagePart.ToolCall(...)`
  * - inlineData (non-empty bytes) → `MessagePart.InlineData(mimeType, sizeBytes, data)`
+ * - inlineData + thought=true → `null` (see below)
+ *
+ * An image generated with thinking enabled arrives as intermediate draft images flagged
+ * `thought=true` followed by the final, unflagged image. [MessagePart.Thought] carries text only and
+ * the draft is not a result, so it is dropped here: otherwise it would be stored as a file and win the
+ * aggregator's "first URI wins" rule over the real image. Both the streaming and the direct paths go
+ * through this function, so the rule holds for both.
  *
  * `thoughtSignature` is base64-encoded — same format that round-trips back via
  * `TextPromptPart.thoughtSignature`.
@@ -42,6 +49,7 @@ internal fun Part.toEventOrNull(): PromptExecutionEvent? {
         return PartReceived(call.toToolCall(signature))
     }
     inlineData().getOrNull()?.let { blob ->
+        if (thought().getOrNull() == true) return null
         val bytes = blob.data().getOrNull() ?: return null
         return PartReceived(
             MessagePart.InlineData(
