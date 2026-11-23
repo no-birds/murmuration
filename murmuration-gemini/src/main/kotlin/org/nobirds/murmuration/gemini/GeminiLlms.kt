@@ -146,6 +146,31 @@ object GeminiLlms {
         thinkingPricePerMillion = 1.5,
     )
 
+    // Gemini Nano Banana 2.1 (GA 2026-10-06), Vertex global tariff per 1M tokens: input (text, image)
+    // $1.50, cached input $0.15, text output including thinking $7.50, image output $30.00. A 1K image
+    // is 1120 output tokens (≈ $0.034), 2K is 1680, 4K is 3780. Thinking is billed at the text rate
+    // (its own thinking rate, not the image rate) and cannot be turned off. Implicit caching only,
+    // there is no explicit cache, so no storage rate: 0.0.
+    private val GEMINI_NANO_BANANA_2_1_PRICING = LlmPricingProfile(
+        inputPricePerMillion = 1.5,
+        cachedInputPricePerMillion = 0.15,
+        outputPricePerMillion = 30.0,
+        cacheStoragePricePerMillionPerHour = 0.0,
+        thinkingPricePerMillion = 7.5,
+    )
+
+    // Gemini 3 Pro Image (Nano Banana Pro, GA), Vertex tariff per 1M tokens: input (text, image)
+    // $2.00 (an input image is 560 tokens), cached input $0.20, text output including thinking
+    // $12.00, image output $120.00. 1K and 2K images are 1120 output tokens (≈ $0.134), 4K is 2000
+    // (≈ $0.24). Thinking is billed at the text rate. No explicit cache: storage rate 0.0.
+    private val GEMINI_3_PRO_IMAGE_PRICING = LlmPricingProfile(
+        inputPricePerMillion = 2.0,
+        cachedInputPricePerMillion = 0.2,
+        outputPricePerMillion = 120.0,
+        cacheStoragePricePerMillionPerHour = 0.0,
+        thinkingPricePerMillion = 12.0,
+    )
+
     // Gemini 3.1 Pro Preview pricing for ≤200K input tokens.
     // The cost calculator is flat (no tiered profile) — for prompts > 200K the actual cost
     // is 2× input and 1.5× output. Our typical turn stays under 200K, so the underestimate
@@ -356,7 +381,11 @@ object GeminiLlms {
         val GEMINI_2_5_PRO =
             geminiTextModel("google", "Gemini 2.5 Pro", "2.5", true, "gemini-2.5-pro", GEMINI_2_5_PRO_PRICING, 1024)
 
-        // Image model: text+image in, text+image out (generateContent multimodal). No caching/tools.
+        /**
+         * Image model: text+image in, text+image out (generateContent multimodal). No caching/tools.
+         *
+         * Deprecated by Google 2026-10-06 in favour of `gemini-nano-banana-2.1`; shutdown date not announced.
+         */
         val GEMINI_3_1_FLASH_IMAGE = llm("google", "gemini-3.1-flash-image") {
             family = "gemini"; name = "Gemini 3.1 Flash Image"; version = "3.1"; stable = true
             pricing = GEMINI_3_1_FLASH_IMAGE_PRICING
@@ -377,6 +406,32 @@ object GeminiLlms {
             thinking { level(ThinkingLevel.MINIMAL, ThinkingLevel.HIGH) }
         }
 
+        /**
+         * Nano Banana 2.1 (GA 2026-10-06), the update of `gemini-3.1-flash-image`. Resolutions 1K/2K/4K
+         * (there is no 512: `ImageResolution.SD_512` is clamped to "1K"). Thinking tiers MINIMAL,
+         * MEDIUM (default) and HIGH; thinking cannot be turned off. On Vertex the model is available
+         * in the `global` location only. Implicit caching only; the model declares no explicit cache.
+         */
+        val GEMINI_NANO_BANANA_2_1 = llm("google", "gemini-nano-banana-2.1") {
+            family = "gemini"; name = "Gemini Nano Banana 2.1"; version = "2.1"; stable = true
+            pricing = GEMINI_NANO_BANANA_2_1_PRICING
+            input { text(); image() }
+            output { text(); image() }
+            thinking { level(ThinkingLevel.MINIMAL, ThinkingLevel.MEDIUM, ThinkingLevel.HIGH) }
+        }
+
+        /**
+         * Nano Banana Pro (GA). Thinking tiers of this model were NOT verified against the
+         * documentation, so no thinking constraint is declared (same shape as the sibling
+         * `gemini-3.1-flash-image`: no declaration means "no known restriction").
+         */
+        val GEMINI_3_PRO_IMAGE = llm("google", "gemini-3-pro-image") {
+            family = "gemini"; name = "Gemini 3 Pro Image"; version = "3"; stable = true
+            pricing = GEMINI_3_PRO_IMAGE_PRICING
+            input { text(); image() }
+            output { text(); image() }
+        }
+
         internal val ALL = listOf(
             GEMINI_3_FLASH,
             GEMINI_3_5_FLASH,
@@ -391,7 +446,9 @@ object GeminiLlms {
             GEMINI_3_1_PRO,
             GEMINI_2_5_PRO,
             GEMINI_3_1_FLASH_IMAGE,
-            GEMINI_3_1_FLASH_LITE_IMAGE
+            GEMINI_3_1_FLASH_LITE_IMAGE,
+            GEMINI_NANO_BANANA_2_1,
+            GEMINI_3_PRO_IMAGE
         )
     }
 
@@ -535,7 +592,11 @@ object GeminiLlms {
         val VERTEX_GEMINI_2_5_PRO =
             geminiTextModel("vertex", "Gemini 2.5 Pro", "2.5", true, "gemini-2.5-pro", GEMINI_2_5_PRO_PRICING, 1024)
 
-        // Image model: text+image in, text+image out (generateContent multimodal). No caching/tools.
+        /**
+         * Image model: text+image in, text+image out (generateContent multimodal). No caching/tools.
+         *
+         * Deprecated by Google 2026-10-06 in favour of `gemini-nano-banana-2.1`; shutdown date not announced.
+         */
         val VERTEX_GEMINI_3_1_FLASH_IMAGE = llm("vertex", "gemini-3.1-flash-image") {
             family = "gemini"; name = "gemini 3.1 Flash Image"; version = "3.1"; stable = true
             pricing = GEMINI_3_1_FLASH_IMAGE_PRICING
@@ -554,6 +615,32 @@ object GeminiLlms {
             input { text(); image() }
             output { text(); image() }
             thinking { level(ThinkingLevel.MINIMAL, ThinkingLevel.HIGH) }
+        }
+
+        /**
+         * Nano Banana 2.1 (GA 2026-10-06), the update of `gemini-3.1-flash-image`. Resolutions 1K/2K/4K
+         * (there is no 512: `ImageResolution.SD_512` is clamped to "1K"). Thinking tiers MINIMAL,
+         * MEDIUM (default) and HIGH; thinking cannot be turned off. On Vertex the model is available
+         * in the `global` location only. Implicit caching only; the model declares no explicit cache.
+         */
+        val VERTEX_GEMINI_NANO_BANANA_2_1 = llm("vertex", "gemini-nano-banana-2.1") {
+            family = "gemini"; name = "gemini Nano Banana 2.1"; version = "2.1"; stable = true
+            pricing = GEMINI_NANO_BANANA_2_1_PRICING
+            input { text(); image() }
+            output { text(); image() }
+            thinking { level(ThinkingLevel.MINIMAL, ThinkingLevel.MEDIUM, ThinkingLevel.HIGH) }
+        }
+
+        /**
+         * Nano Banana Pro (GA). Thinking tiers of this model were NOT verified against the
+         * documentation, so no thinking constraint is declared (same shape as the sibling
+         * `gemini-3.1-flash-image`: no declaration means "no known restriction").
+         */
+        val VERTEX_GEMINI_3_PRO_IMAGE = llm("vertex", "gemini-3-pro-image") {
+            family = "gemini"; name = "gemini 3 Pro Image"; version = "3"; stable = true
+            pricing = GEMINI_3_PRO_IMAGE_PRICING
+            input { text(); image() }
+            output { text(); image() }
         }
 
         // Lyria 3 Pro: text prompt in, audio out (generateContent with AUDIO response modality).
@@ -587,6 +674,8 @@ object GeminiLlms {
             VERTEX_GEMINI_2_5_PRO,
             VERTEX_GEMINI_3_1_FLASH_IMAGE,
             VERTEX_GEMINI_3_1_FLASH_LITE_IMAGE,
+            VERTEX_GEMINI_NANO_BANANA_2_1,
+            VERTEX_GEMINI_3_PRO_IMAGE,
             VERTEX_LYRIA_3_PRO,
             VERTEX_GEMINI_EMBEDDING_001
         )
